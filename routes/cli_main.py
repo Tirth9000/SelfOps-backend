@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
-from db.database import base, engine
-from db import models, schema
+from backend.db.database import base, engine
+from backend.db import models, schema
 #also import get_db and from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 models.base.metadata.create_all(bind=engine)

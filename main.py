@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routes import cli_main, web_main
+from .routes import cli_main, web_main
 
 
 app = FastAPI(title = "SELFOPS BDE")
