@@ -1,2 +1,5 @@
 fastapi
+unvicorn
+pydantic
 sqlalchemy
+databases
