@@ -1,10 +1,13 @@
 from fastapi import FastAPI
-from routes import cli_main, web_main
+from routes.CLI import cli_main
+from routes.WEB import web_main
 
 
 app = FastAPI(title = "SELFOPS BDE")
 
 app.include_router(cli_main.router, prefix="/cli", tags=["CLI"])
+
+
 
 if __name__ == "__main__":
     import uvicorn

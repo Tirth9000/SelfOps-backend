@@ -2,34 +2,12 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from db.database import base, engine
 from passlib.context import CryptContext
-from .utility import create_access_token, verify_token
+from .service import *
 from db import models, schema
 from fastapi.responses import JSONResponse
 models.base.metadata.create_all(bind=engine)
 
 router = APIRouter()
-
-#instead of user dict connect to model DB
-users_db = {                    
-    'user1': {
-        "username": "user1",
-        "password": "password1"
-        },
-    'user2':{
-        "username": "user2", 
-        "password": 'password2'
-        },
-    }
-
-def authenticate_user(username: str, password: str):
-    user = users_db.get(username)
-    if not user:
-        return None
-    # if not pwd_context.verify(password, user["password"]):
-    if not password == user["password"]:
-        return None
-    return user
-
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -50,6 +28,7 @@ def cli_login(user_data: schema.User):
         status_code=status.HTTP_200_OK )
 
     
+#test
 @router.get('/protected')
 def protected_route(token: dict = Depends(oauth2_scheme)):
     print("Protected route accessed")
