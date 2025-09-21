@@ -8,18 +8,24 @@ app= FastAPI(title="SELFOPS web API")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 class LoginRequest(BaseModel):
-    username: str
+    email: str
     password: str
 
 user1={
-    "username": "user",
+    "email": "user@gmail.com",
     "password": hash_password("user123")
 }
 
+class SignupRequest(BaseModel):
+    email: str
+    password: str
+    confirm_password: str
+
+
 @app.post("/login")
 def login(user: LoginRequest):
-    if user.username != user1["username"] or not verify_password(user.password, user1["password"]):
-        raise HTTPException(status_code=401, detail="Invalid username or password")
+    if user.email != user1["email"] or not verify_password(user.password, user1["password"]):
+        raise HTTPException(status_code=401, detail="Invalid emial or password")
 
     token = create_access_token({"sub": user.username})
     print(f"hashed_password: {user1['password']}")
@@ -32,6 +38,22 @@ def login(user: LoginRequest):
     }
     )
 
+@app.post("/signup")
+def signup(user:SignupRequest):
+    if user.password != user.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+
+    if user.email in user1:
+        raise HTTPException(status_code=400, detail="User already exists")
+
+    user1[user.email] = hash_password(user.password)
+
+    return JSONResponse({
+        "status": status.HTTP_201_CREATED,
+        "message": "User registered successfully",
+        "email": user.email
+    })
+    
 container_status = {
     "image": "nginx:1.26",
     "uptime": "2h 14m",
