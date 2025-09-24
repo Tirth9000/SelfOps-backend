@@ -2,7 +2,7 @@ from fastapi import FastAPI,HTTPException,status,Depends
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
-from auth import hash_password, verify_password, create_access_token, decode_access_token
+from .auth import hash_password, verify_password, create_access_token, decode_access_token
 
 app= FastAPI(title="SELFOPS web API")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
