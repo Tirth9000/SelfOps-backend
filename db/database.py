@@ -1,19 +1,8 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from beanie import init_beanie
+from motor.motor_asyncio import AsyncIOMotorClient
+from decouple import config
+from .models import User  # Import other models like Container if added later
 
-
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-base = declarative_base()
-
-def get_db():
-    db = SessionLocal()
-    try: 
-        yield db
-    finally:
-        db.close()
+async def init_db():
+    client = AsyncIOMotorClient(config("MONGODB_URI"))
+    await init_beanie(database=client.get_default_database(), document_models=[User])  # Add more models as needed
