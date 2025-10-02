@@ -26,9 +26,14 @@ async def init_db():
 async def on_startup():
     await init_db()
 
+socket_app.other_asgi_app = app
+
 # Include routers
 app.include_router(cli_router, prefix="/cli", tags=["cli"])
 app.include_router(web_router, tags=["web"])
+
+
+
 
 if __name__ == "__main__":
     import uvicorn

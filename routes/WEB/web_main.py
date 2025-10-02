@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, status, Depends
+from fastapi import APIRouter, FastAPI, HTTPException, status, Depends
 from pydantic import BaseModel, EmailStr
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
@@ -65,7 +65,32 @@ async def login(user: LoginRequest):
         "message": "Login successful",
         "access_token": token,
         "token_type": "bearer"
-    })
+        }
+    )
+
+
+
+class SignupRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+    confirm_password: str
+    
+@router.post("/signup")
+def signup(user:SignupRequest):
+    if user.password != user.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+
+    if user.email in users:
+        raise HTTPException(status_code=400, detail="User already exists")
+
+    users[user.email] = {
+        "username": user.username,
+        "email": user.email,
+        "password": hash_password(user.password)
+    }
+    print(users)
+    
 
 @router.get("/user/profile", response_model=dict)
 async def get_user_profile(token: str = Depends(oauth2_scheme)):
@@ -88,6 +113,7 @@ async def get_user_profile(token: str = Depends(oauth2_scheme)):
         "username": user.username,
         "email": user.email
     })
+
 
 @router.post("/organization/create")
 async def create_organization(org: OrganizationRequest, token: str = Depends(oauth2_scheme)):
@@ -124,6 +150,8 @@ container_status = {
     "ports": "80→8080, 443→8443"
 }
 
+
+
 @router.get("/container/status", response_model=dict)
 async def get_container_status(token: str = Depends(oauth2_scheme)):
     payload = decode_access_token(token)
@@ -132,4 +160,3 @@ async def get_container_status(token: str = Depends(oauth2_scheme)):
     
     # For now, revert to static data to match old behavior
     return JSONResponse(container_status)
-

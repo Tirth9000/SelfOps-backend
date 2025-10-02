@@ -30,6 +30,7 @@ async def join(sid, data):
 @sio.event
 async def live_message(sid, data):
     print(f'Message from {sid}: {data}')
-    # await sio.emit("live_message", data, room=register_room[sid]['room'])
-    # print('message sent!')
+    print(register_room[sid]['room'])
+    await sio.emit("live_message", data, room=register_room[sid]['room'])
+    print('message sent!')
     
