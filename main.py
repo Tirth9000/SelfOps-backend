@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from routes.CLI import cli_main
+from routes.WEB import web_main
 from socket_server import socket_app
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -16,6 +17,7 @@ app.add_middleware(
 
 
 app.include_router(cli_main.router, prefix="/cli", tags=["CLI"])
+app.include_router(web_main.router, prefix="/web", tags=["WEB"])
 
 
 socket_app.other_asgi_app = app
