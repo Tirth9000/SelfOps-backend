@@ -1,11 +1,9 @@
-from fastapi import APIRouter, FastAPI, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, EmailStr
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
-from .auth import create_access_token, decode_access_token
+from .auth import create_access_token, decode_access_token, hash_password
 from db.models import User
-import subprocess
-import re
 from fastapi import APIRouter
 
 router = APIRouter()
@@ -68,6 +66,13 @@ async def login(user: LoginRequest):
         }
     )
 
+users = {
+    "user1": {
+        "username": "user1",
+        "email": "user1@gmail.com",
+        "password": "pass123",
+    },
+}
 
 
 class SignupRequest(BaseModel):
