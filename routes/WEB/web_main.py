@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from pydantic import BaseModel, EmailStr
+from db.schema import *
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 from .auth import create_access_token, decode_access_token, hash_password
@@ -8,39 +8,14 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")  # Matches CLI endpoint
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/web/login")
 
-class UserRequest(BaseModel):
-    username: str
-    email: EmailStr
-    password: str
-
-class OrganizationRequest(BaseModel):
-    user_id: str
-    organization_name: str
-
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-class ApplicationRequest(BaseModel):
-    organization_id: str
-    app_name: str
-
-class ContainerActionRequest(BaseModel):
-    application_id: str
-    container_name: str
-    port: str
-    image_name: str
-    image_tag: str
-    environment: dict
-    volumes: list[str]
 
 @router.post("/register")
-async def register(user: UserRequest):
+async def register(user: SignupRequest):
     existing = await User.find_one({"email": user.email})
     if existing:
-        raise HTTPException(status_code=400, detail="User already exists")
+        raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail="User already exists")
     
     new_user = User(username=user.username, email=user.email, password=user.password)  # Include password
     
@@ -51,6 +26,7 @@ async def register(user: UserRequest):
         "email": user.email
     })
 
+
 @router.post("/login")
 async def login(user: LoginRequest):
     db_user = await User.find_one({"email": user.email})
@@ -59,7 +35,6 @@ async def login(user: LoginRequest):
     
     token = create_access_token({"sub": db_user.username}) 
     return JSONResponse({
-        
         "message": "Login successful",
         "access_token": token,
         "token_type": "bearer"
@@ -75,26 +50,21 @@ users = {
 }
 
 
-class SignupRequest(BaseModel):
-    username: str
-    email: str
-    password: str
-    confirm_password: str
-    
-@router.post("/signup")
-def signup(user:SignupRequest):
-    if user.password != user.confirm_password:
-        raise HTTPException(status_code=400, detail="Passwords do not match")
 
-    if user.email in users:
-        raise HTTPException(status_code=400, detail="User already exists")
+# @router.post("/signup")
+# def signup(user:SignupRequest):
+#     if user.password != user.confirm_password:
+#         raise HTTPException(status_code=400, detail="Passwords do not match")
 
-    users[user.email] = {
-        "username": user.username,
-        "email": user.email,
-        "password": hash_password(user.password)
-    }
-    print(users)
+#     if user.email in users:
+#         raise HTTPException(status_code=400, detail="User already exists")
+
+#     users[user.email] = {
+#         "username": user.username,
+#         "email": user.email,
+#         "password": hash_password(user.password)
+#     }
+#     print(users)
     
 
 @router.get("/user/profile", response_model=dict)
@@ -120,30 +90,18 @@ async def get_user_profile(token: str = Depends(oauth2_scheme)):
     })
 
 
-@router.post("/organization/create")
-async def create_organization(org: OrganizationRequest, token: str = Depends(oauth2_scheme)):
-    payload = decode_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    
-    # Implement organization creation logic
-    return JSONResponse({
-        "status": status.HTTP_201_CREATED,
-        "message": "Organization created successfully",
-        "organization_id": "new_org_id"  # Placeholder
-    })
 
-@router.get("/dashboard/info", response_model=dict)
-async def get_dashboard_info(token: str = Depends(oauth2_scheme)):
-    payload = decode_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+# @router.get("/dashboard/info", response_model=dict)
+# async def get_dashboard_info(token: str = Depends(oauth2_scheme)):
+#     payload = decode_access_token(token)
+#     if not payload:
+#         raise HTTPException(status_code=401, detail="Invalid or expired token")
     
-    # Hardcoded initial stats (to be replaced with real data later)
-    return JSONResponse({
-        "registered_users": 5,
-        "active_containers": 0
-    })
+#     # Hardcoded initial stats (to be replaced with real data later)
+#     return JSONResponse({
+#         "registered_users": 5,
+#         "active_containers": 0
+#     })
 
 container_status = {
     "image": "nginx:1.26",
@@ -157,11 +115,11 @@ container_status = {
 
 
 
-@router.get("/container/status", response_model=dict)
-async def get_container_status(token: str = Depends(oauth2_scheme)):
-    payload = decode_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+# @router.get("/container/status", response_model=dict)
+# async def get_container_status(token: str = Depends(oauth2_scheme)):
+#     payload = decode_access_token(token)
+#     if not payload:
+#         raise HTTPException(status_code=401, detail="Invalid or expired token")
     
-    # For now, revert to static data to match old behavior
-    return JSONResponse(container_status)
+#     # For now, revert to static data to match old behavior
+#     return JSONResponse(container_status)

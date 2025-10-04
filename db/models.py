@@ -1,6 +1,7 @@
 from beanie import Document
 from pydantic import EmailStr
 from passlib.context import CryptContext
+from routes.WEB.auth import hash_password
  # Import from auth.py
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

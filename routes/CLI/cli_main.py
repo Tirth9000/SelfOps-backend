@@ -19,6 +19,7 @@ async def authenticate_user(email: str, password: str):
         return None
     return user
 
+
 @router.post("/login")
 async def cli_login(user_data: LoginRequest):
     user = await authenticate_user(user_data.email, user_data.password)
@@ -33,19 +34,20 @@ async def cli_login(user_data: LoginRequest):
         "token_type": "bearer"
     }
 
-@router.get('/protected')
-async def protected_route(token: str = Depends(oauth2_scheme)):
-    print("Protected route accessed")
-    token_data = decode_access_token(token)
-    if not token_data:
-        return JSONResponse(content={"message": "Invalid or expired token"},
-                            status_code=status.HTTP_401_UNAUTHORIZED)
+
+# @router.get('/protected')
+# async def protected_route(token: str = Depends(oauth2_scheme)):
+#     print("Protected route accessed")
+#     token_data = decode_access_token(token)
+#     if not token_data:
+#         return JSONResponse(content={"message": "Invalid or expired token"},
+#                             status_code=status.HTTP_401_UNAUTHORIZED)
     
-    user_id = token_data.get("sub")
-    user = await User.find_one({"_id": user_id})  # Fixed to use find_one
-    if not user:
-        return JSONResponse(content={"message": "User not found"},
-                            status_code=status.HTTP_401_UNAUTHORIZED)
+#     user_id = token_data.get("sub")
+#     user = await User.find_one({"_id": user_id})  # Fixed to use find_one
+#     if not user:
+#         return JSONResponse(content={"message": "User not found"},
+#                             status_code=status.HTTP_401_UNAUTHORIZED)
     
-    return JSONResponse(content={"message": f"Hello {user.username}, this is a protected route"}, 
-                        status_code=status.HTTP_200_OK)
+#     return JSONResponse(content={"message": f"Hello {user.username}, this is a protected route"}, 
+#                         status_code=status.HTTP_200_OK)
