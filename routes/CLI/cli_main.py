@@ -1,23 +1,14 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
-from db.models import User
 from routes.WEB.auth import create_access_token, decode_access_token
-from pydantic import BaseModel
+from db.schema import LoginRequest, StatsRequest
+from .service import authenticate_user
+from db.models import User, Applications, ContainerStats
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/cli/login")
 
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-async def authenticate_user(email: str, password: str):
-    user = await User.find_one({"email": email})
-    if not user or not user.verify_password(password):
-        print(f"Authentication failed for email: {email}")
-        return None
-    return user
 
 
 @router.post("/login")
@@ -33,6 +24,32 @@ async def cli_login(user_data: LoginRequest):
         "access_token": token,
         "token_type": "bearer"
     }
+
+
+@router.post("/store_stats")
+async def store_container_stats(data: StatsRequest):
+    # print(data)
+    containers = data.containers
+    try:
+        user = await User.find_one({"email": "user1@gmail.com"})
+        print(user)
+        user_app = Applications(app_name = data.app_name, user_id = user.id)
+        app = await user_app.insert()
+        print(app)
+
+        if app:
+            count = 1
+            for container in containers:
+                print(count)
+                count +=1 
+                # await new_container_stats.insert()
+            return JSONResponse(content={"message": "Container stats stored successfully"},
+                                status_code=status.HTTP_201_CREATED)
+    except Exception as e:
+        return JSONResponse(content={"message": f"Error storing container stats: {e}"},
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
 
 # @router.get('/protected')
