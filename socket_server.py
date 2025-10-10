@@ -33,4 +33,3 @@ async def live_message(sid, data):
     print(register_room[sid]['room'])
     await sio.emit("live_message", data, room=register_room[sid]['room'])
     print('message sent!')
-    
