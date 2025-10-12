@@ -17,7 +17,7 @@ async def register(user: SignupRequest):
     if existing:
         raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail="User already exists")
     
-    new_user = User(username=user.username, email=user.email, password=user.password)  # Include password
+    new_user = User(username=user.username, email=user.email, password=hash_password(user.password))  # Include password
     
     await new_user.insert()
     return JSONResponse({
