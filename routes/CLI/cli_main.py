@@ -13,6 +13,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/cli/login")
 
 @router.post("/login")
 async def cli_login(user_data: LoginRequest):
+    print('cli server')
     user = await authenticate_user(user_data.email, user_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
