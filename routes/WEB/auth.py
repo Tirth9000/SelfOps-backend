@@ -10,13 +10,13 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30 # Default to 30 minutes
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
+# ✅ hash password with argon2 directly
 def hash_password(password: str) -> str:
-    pw_hash = hashlib.sha256(password.encode("utf-8")).digest()  # bytes, not hex string
-    return pwd_context.hash(pw_hash)
+    return pwd_context.hash(password)
 
+# ✅ verify password
 def verify_password(raw_password: str, hashed_password: str) -> bool:
-    pw_hash = hashlib.sha256(raw_password.encode("utf-8")).digest()
-    return pwd_context.verify(pw_hash, hashed_password)
+    return pwd_context.verify(raw_password, hashed_password)
 
 def create_access_token(data: dict):
     to_encode = data.copy()
