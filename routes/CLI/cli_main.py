@@ -29,10 +29,10 @@ async def cli_login(user_data: LoginRequest):
 
 @router.post("/store_stats")
 async def store_container_stats(data: StatsRequest):
-    # print(data)
+    print(data)
     containers = data.containers
     try:
-        user = await User.find_one({"email": "user1@gmail.com"})
+        user = await User.find_one({"email": "user@gmail.com"})
         print(user)
         user_app = Applications(app_name = data.app_name, user_id = user.id)
         app = await user_app.insert()
