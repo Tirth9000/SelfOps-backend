@@ -29,8 +29,7 @@ class Applications(Document):
         name = "applications"
 
 
-class AppContainers(Document):
-    app_id: Link[Applications]
+class ContainerStats(Document):
     container_id: str
     container_name: str
     image: str
@@ -47,3 +46,11 @@ class AppContainers(Document):
     class Settings:
         name = "container_stats"
         extra = "allow"
+
+class SharedResources(Document):
+    app_id : Link[Applications]
+    owner_user_id: Link[User]
+    accessed_user_id:Link[User] 
+           
+    class Settings:
+        name = "shared_resources"
