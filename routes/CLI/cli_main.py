@@ -16,7 +16,7 @@ async def cli_login(user_data: LoginRequest, user: str = Depends(verify_token)):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    token = create_access_token({"sub": str(user.id)})
+    token = create_access_token({"sub": user.username}) 
     return {
         "status": status.HTTP_200_OK,
         "message": "Login successful",

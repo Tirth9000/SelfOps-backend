@@ -3,13 +3,19 @@ from db.schema import *
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 from .auth import create_access_token, decode_access_token, hash_password
-from db.models import User
-from fastapi import APIRouter
+from db.models import User, Applications
+from cryptography.fernet import Fernet
+from decouple import config
+import json
+from bson.objectid import ObjectId
 
 router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/web/login")
 
+# Initialize Fernet with key from .env
+FERNET_KEY = config("FERNET_KEY")
+fernet = Fernet(FERNET_KEY.encode())  
 
 @router.post("/register")
 async def register(user: SignupRequest):
@@ -73,3 +79,38 @@ async def get_user_profile(token: str = Depends(oauth2_scheme)):
         "email": user.email
     })
 
+
+@router.post("/collaborate/create")
+async def create_collaborative_link(request: ApplicationRequest, token: str = Depends(oauth2_scheme)):
+    payload = decode_access_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    user_id = payload.get("sub")
+    print(f"Debug: Searching for user with username or _id: {user_id}")
+
+    try:
+        if all(c in '0123456789abcdefABCDEF' for c in user_id) and len(user_id) == 24:
+            user = await User.find_one({"_id": ObjectId(user_id)})
+        else:
+            user = await User.find_one({"username": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        print(f"Debug: User lookup error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
+
+    # ✅ FIXED QUERY
+    app = await Applications.find_one({"app_name": request.app_name, "user_id.$id": user.id})
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    data = {"user_id": user.username, "application_id": str(app.id)}
+    encrypted_data = fernet.encrypt(json.dumps(data).encode()).decode()
+    collaborative_url = f"{config('BACKEND_URL')}/collaborate/{encrypted_data}"
+
+    return JSONResponse({
+        "status": status.HTTP_201_CREATED,
+        "message": "Collaborative link created",
+        "url": collaborative_url
+    })
