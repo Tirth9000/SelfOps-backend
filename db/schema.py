@@ -23,7 +23,7 @@ class ContainerStats(BaseModel):
     memory_limit: int
     network_io: dict
     ports: dict
-    health: str = None
+    health: str
     
     class Config:
         extra = "allow"
@@ -36,10 +36,6 @@ class StatsRequest(BaseModel):
     class Config:
         extra = "allow"
 
-# class OrganizationRequest(BaseModel):
-#     user_id: str
-#     organization_name: str
-
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(...)
@@ -47,3 +43,8 @@ class LoginRequest(BaseModel):
 class ApplicationRequest(BaseModel):
     app_name: str
     # created_at: TimeStamp = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SharedResources(BaseModel):
+    owner_user_id: str
+    app_id: str
+    accessed_user_id:str    

@@ -2,12 +2,15 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from db.schema import *
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
-from .auth import create_access_token, decode_access_token, hash_password
+from .auth import create_access_token, decode_access_token, hash_password,get_current_user
 from db.models import User, Applications
 from cryptography.fernet import Fernet
 from decouple import config
 import json
 from bson.objectid import ObjectId
+from db.models import SharedResources as SharedResourcesModel, User, Applications
+from db.schema import SharedResources as SharedResourcesSchema
+from urllib.parse import urlparse
 
 router = APIRouter()
 
@@ -109,8 +112,55 @@ async def create_collaborative_link(request: ApplicationRequest, token: str = De
     encrypted_data = fernet.encrypt(json.dumps(data).encode()).decode()
     collaborative_url = f"{config('BACKEND_URL')}/collaborate/{encrypted_data}"
 
-    return JSONResponse({
+    return JSONResponse({   
         "status": status.HTTP_201_CREATED,
         "message": "Collaborative link created",
         "url": collaborative_url
     })
+
+
+def decode_url(url: str):
+    """
+    Decode a collaborative URL and return the owner_user_id and application_id.
+    """
+    try:
+        # Extract the encrypted part of the URL
+        path = urlparse(url).path  # e.g., /collaborate/<encrypted_data>
+        encrypted_data = path.split("/")[-1]
+
+        # Decrypt the data
+        decrypted_bytes = fernet.decrypt(encrypted_data.encode())
+        data = json.loads(decrypted_bytes.decode())
+
+        # Return the owner_user_id and application_id
+        return data["user_id"], data["application_id"]
+
+    except Exception as e:
+        raise ValueError(f"Invalid or corrupted URL: {str(e)}")
+    
+
+
+
+@router.post("/share", response_model=SharedResourcesSchema)
+async def shared_resources(url: str, current_user: User = Depends(get_current_user)):
+    owner_user_id, app_id = decode_url(url)
+    owner_user = await User.get(ObjectId(owner_user_id))
+    app_doc = await Applications.get(ObjectId(app_id))
+
+    if not owner_user or not app_doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid owner or application ID"
+        )
+    shared_entry = SharedResourcesModel(
+        app_id=app_doc,
+        owner_user_id=owner_user,
+        accessed_user_id=current_user,
+    )
+    await shared_entry.insert()
+
+    return SharedResourcesSchema(
+        owner_user_id=str(owner_user.id),
+        app_id=str(app_doc.id),
+        accessed_user_id=str(current_user.id),
+    )
