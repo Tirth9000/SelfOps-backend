@@ -51,22 +51,6 @@ users = {
 
 
 
-# @router.post("/signup")
-# def signup(user:SignupRequest):
-#     if user.password != user.confirm_password:
-#         raise HTTPException(status_code=400, detail="Passwords do not match")
-
-#     if user.email in users:
-#         raise HTTPException(status_code=400, detail="User already exists")
-
-#     users[user.email] = {
-#         "username": user.username,
-#         "email": user.email,
-#         "password": hash_password(user.password)
-#     }
-#     print(users)
-    
-
 @router.get("/user/profile", response_model=dict)
 async def get_user_profile(token: str = Depends(oauth2_scheme)):
     payload = decode_access_token(token)
@@ -89,37 +73,3 @@ async def get_user_profile(token: str = Depends(oauth2_scheme)):
         "email": user.email
     })
 
-
-
-# @router.get("/dashboard/info", response_model=dict)
-# async def get_dashboard_info(token: str = Depends(oauth2_scheme)):
-#     payload = decode_access_token(token)
-#     if not payload:
-#         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    
-#     # Hardcoded initial stats (to be replaced with real data later)
-#     return JSONResponse({
-#         "registered_users": 5,
-#         "active_containers": 0
-#     })
-
-container_status = {
-    "image": "nginx:1.26",
-    "uptime": "2h 14m",
-    "restarts": 1,
-    "cpu": "12.5%",
-    "memory": "256MB / 1GB",
-    "net_io": "12.4MB / 8.9MB",
-    "ports": "80→8080, 443→8443"
-}
-
-
-
-# @router.get("/container/status", response_model=dict)
-# async def get_container_status(token: str = Depends(oauth2_scheme)):
-#     payload = decode_access_token(token)
-#     if not payload:
-#         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    
-#     # For now, revert to static data to match old behavior
-#     return JSONResponse(container_status)

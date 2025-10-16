@@ -3,16 +3,14 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
 from routes.WEB.auth import create_access_token, decode_access_token
 from db.schema import LoginRequest, StatsRequest
-from .service import authenticate_user
-from db.models import User, Applications, ContainerStats
+from .service import authenticate_user, verify_token
+from db.models import User, Applications, AppContainers
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/cli/login")
-
-
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/cli/login")
 
 @router.post("/login")
-async def cli_login(user_data: LoginRequest):
+async def cli_login(user_data: LoginRequest, user: str = Depends(verify_token)):
     print('cli server')
     user = await authenticate_user(user_data.email, user_data.password)
     if not user:
@@ -27,23 +25,36 @@ async def cli_login(user_data: LoginRequest):
     }
 
 
+
 @router.post("/store_stats")
 async def store_container_stats(data: StatsRequest):
-    print(data)
-    containers = data.containers
     try:
-        user = await User.find_one({"email": "user@gmail.com"})
-        print(user)
+        containers = data.containers
+        user = await User.find_one({"email": "tirth@gmail.com"})
         user_app = Applications(app_name = data.app_name, user_id = user.id)
         app = await user_app.insert()
-        print(app)
 
         if app:
-            count = 1
-            for container in containers:
-                print(count)
-                count +=1 
-                # await new_container_stats.insert()
+            app_containers = [
+                AppContainers(
+                    app_id = app,
+                    container_id = container.container_id,
+                    container_name = container.container_name,
+                    image = container.image,
+                    status = container.status,
+                    uptime = container.uptime,
+                    restart_count = container.restart_count,
+                    cpu_percent = container.cpu_percent,
+                    memory_usage = container.memory_usage,
+                    memory_limit = container.memory_limit,
+                    network_io = container.network_io,
+                    ports = container.ports,
+                    health = container.health
+                ) 
+                for container in containers 
+            ]
+
+            await AppContainers.insert_many(app_containers)
             return JSONResponse(content={"message": "Container stats stored successfully"},
                                 status_code=status.HTTP_201_CREATED)
     except Exception as e:

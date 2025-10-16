@@ -29,7 +29,8 @@ class Applications(Document):
         name = "applications"
 
 
-class ContainerStats(Document):
+class AppContainers(Document):
+    app_id: Link[Applications]
     container_id: str
     container_name: str
     image: str

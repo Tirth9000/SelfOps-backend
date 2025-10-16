@@ -23,7 +23,7 @@ class ContainerStats(BaseModel):
     memory_limit: int
     network_io: dict
     ports: dict
-    health: str = None
+    health: str
     
     class Config:
         extra = "allow"
@@ -35,10 +35,6 @@ class StatsRequest(BaseModel):
 
     class Config:
         extra = "allow"
-
-# class OrganizationRequest(BaseModel):
-#     user_id: str
-#     organization_name: str
 
 class LoginRequest(BaseModel):
     email: EmailStr
