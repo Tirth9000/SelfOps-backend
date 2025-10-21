@@ -1,0 +1,196 @@
+from fastapi import APIRouter, HTTPException, status, Depends
+from db.schema import *
+from fastapi.responses import JSONResponse
+<<<<<<< HEAD:backend/routes/WEB/web_main.py
+from fastapi.security import OAuth2PasswordBearer
+from .auth import create_access_token, decode_access_token, hash_password,get_current_user
+=======
+from .utils import create_access_token, hash_password, verify_token, store_share_token, get_share_data
+>>>>>>> 6827262d893925cb383ea739adf87890c68c67d3:backend/routes/WEB/web_api.py
+from db.models import User, Applications
+from decouple import config
+from bson.objectid import ObjectId
+from db.models import SharedResources as SharedResourcesModel, User, Applications
+from db.schema import SharedResources as SharedResourcesSchema
+from urllib.parse import urlparse
+
+router = APIRouter()
+
+
+# Initialize Fernet with key from .env
+
+@router.post("/register")
+async def register(user: SignupRequest):
+    existing = await User.find_one({"email": user.email})
+    if existing:
+        raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail="User already exists")
+    
+    new_user = User(username=user.username, email=user.email, password=hash_password(user.password))  # Include password
+    
+    await new_user.insert()
+    return JSONResponse({
+        "status": status.HTTP_201_CREATED,
+        "message": "User registered successfully",
+        "email": user.email
+    })
+
+
+@router.post("/login")
+async def login(user: LoginRequest):
+    db_user = await User.find_one({"email": user.email})
+    if not db_user or not db_user.verify_password(user.password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    token = create_access_token({"sub": db_user.username}) 
+    return JSONResponse({
+        "message": "Login successful",
+        "access_token": token,
+        "token_type": "bearer"
+        }
+    )
+
+
+users = {
+    "user1": {
+        "username": "user1",
+        "email": "user1@gmail.com",
+        "password": "pass123",
+    },
+}
+
+
+
+@router.get("/user/profile", response_model=dict)
+async def get_user_profile(userid: str = Depends(verify_token)):
+    if not userid:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    print(f"Looking for user with _id: {userid}")
+    try:
+        user = await User.find_one({"_id": ObjectId(userid) if userid.isalnum() else userid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        print(f"User lookup error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
+    
+    return JSONResponse({
+        "username": user.username,
+        "email": user.email
+    })
+
+
+
+
+@router.post("/sharelink/create")
+async def create_collaborative_link(request: ApplicationRequest, userid: str = Depends(verify_token)):
+    try:
+        if not userid:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+        print(f"Debug: Searching for user with username or _id: {userid}")
+
+        user = await User.find_one({"_id": ObjectId(userid)})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        app = await Applications.find_one({"app_name": request.app_name, "user_id.$id": user.id})
+        if not app:
+            raise HTTPException(status_code=404, detail="Application not found")
+
+        # data = {"user_id": userid, "application_id": str(app.id)}
+        # encrypted_data = fernet.encrypt(json.dumps(data).encode()).decode()
+        share_token = store_share_token(userid, str(app.id))
+        # collaborative_url = f"{config('BACKEND_URL')}/collaborate/{encrypted_data}"
+
+
+        return JSONResponse({
+            "status": status.HTTP_201_CREATED,
+            "message": "Collaborative link created",
+            "share_token": share_token
+        })
+        
+    except Exception as e:
+        print(f"Debug: User lookup error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
+
+
+
+<<<<<<< HEAD:backend/routes/WEB/web_main.py
+    return JSONResponse({   
+        "status": status.HTTP_201_CREATED,
+        "message": "Collaborative link created",
+        "url": collaborative_url
+    })
+
+
+def decode_url(url: str):
+    """
+    Decode a collaborative URL and return the owner_user_id and application_id.
+    """
+    try:
+        # Extract the encrypted part of the URL
+        path = urlparse(url).path  # e.g., /collaborate/<encrypted_data>
+        encrypted_data = path.split("/")[-1]
+
+        # Decrypt the data
+        decrypted_bytes = fernet.decrypt(encrypted_data.encode())
+        data = json.loads(decrypted_bytes.decode())
+
+        # Return the owner_user_id and application_id
+        return data["user_id"], data["application_id"]
+
+    except Exception as e:
+        raise ValueError(f"Invalid or corrupted URL: {str(e)}")
+    
+
+
+
+@router.post("/share", response_model=SharedResourcesSchema)
+async def shared_resources(url: str, current_user: User = Depends(get_current_user)):
+    owner_user_id, app_id = decode_url(url)
+    owner_user = await User.get(ObjectId(owner_user_id))
+    app_doc = await Applications.get(ObjectId(app_id))
+
+    if not owner_user or not app_doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid owner or application ID"
+        )
+    shared_entry = SharedResourcesModel(
+        app_id=app_doc,
+        owner_user_id=owner_user,
+        accessed_user_id=current_user,
+    )
+    await shared_entry.insert()
+
+    return SharedResourcesSchema(
+        owner_user_id=str(owner_user.id),
+        app_id=str(app_doc.id),
+        accessed_user_id=str(current_user.id),
+    )
+=======
+
+
+#for testing purpose only
+from pydantic import BaseModel
+
+class TokenRequest(BaseModel):
+    app_id: str
+    user_id: str
+
+@router.post("/test_set")
+def test(data : TokenRequest):
+    print(data)
+    token = store_share_token(data.user_id, data.app_id)
+    return {"share_token": token}
+
+    
+class Token(BaseModel):
+    token: str
+
+@router.get("/test_get")
+def test_get(token: Token):
+    data = get_share_data(token.token)
+    return data
+>>>>>>> 6827262d893925cb383ea739adf87890c68c67d3:backend/routes/WEB/web_api.py
