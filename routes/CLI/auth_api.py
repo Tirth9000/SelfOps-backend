@@ -1,22 +1,22 @@
+from bson import ObjectId
 from fastapi import APIRouter, HTTPException, status, Depends
-from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
-from routes.WEB.auth import create_access_token, decode_access_token
+from routes.CLI.utils import cli_create_access_token
 from db.schema import LoginRequest, StatsRequest
-from .service import authenticate_user, verify_token
+from .utils import authenticate_user, verify_token
 from db.models import User, Applications, AppContainers
 
 router = APIRouter()
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/cli/login")
+
 
 @router.post("/login")
-async def cli_login(user_data: LoginRequest, user: str = Depends(verify_token)):
-    print('cli server')
+async def cli_login(user_data: LoginRequest):
     user = await authenticate_user(user_data.email, user_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    token = create_access_token({"sub": user.username}) 
+    token = cli_create_access_token({"sub": str(user.id)}) 
+    
     return {
         "status": status.HTTP_200_OK,
         "message": "Login successful",
@@ -27,10 +27,10 @@ async def cli_login(user_data: LoginRequest, user: str = Depends(verify_token)):
 
 
 @router.post("/store_stats")
-async def store_container_stats(data: StatsRequest):
+async def store_container_stats(data: StatsRequest, userid: str = Depends(verify_token)):
     try:
         containers = data.containers
-        user = await User.find_one({"email": "tirth@gmail.com"})
+        user = await User.find_one({"_id": ObjectId(userid)})
         user_app = Applications(app_name = data.app_name, user_id = user.id)
         app = await user_app.insert()
 
@@ -63,20 +63,12 @@ async def store_container_stats(data: StatsRequest):
 
 
 
-
-# @router.get('/protected')
-# async def protected_route(token: str = Depends(oauth2_scheme)):
-#     print("Protected route accessed")
-#     token_data = decode_access_token(token)
-#     if not token_data:
-#         return JSONResponse(content={"message": "Invalid or expired token"},
-#                             status_code=status.HTTP_401_UNAUTHORIZED)
-    
-#     user_id = token_data.get("sub")
-#     user = await User.find_one({"_id": user_id})  # Fixed to use find_one
-#     if not user:
-#         return JSONResponse(content={"message": "User not found"},
-#                             status_code=status.HTTP_401_UNAUTHORIZED)
-    
-#     return JSONResponse(content={"message": f"Hello {user.username}, this is a protected route"}, 
-#                         status_code=status.HTTP_200_OK)
+#test
+@router.get("/test_token")
+async def test_token(userid : str = Depends(verify_token)):
+    print(userid)
+    user = await User.find_one({"_id": ObjectId(userid)})
+    if user: 
+        print(user)
+        return {"user_id": userid, "username": user.username}
+    raise HTTPException(status_code=404, detail="User not found")

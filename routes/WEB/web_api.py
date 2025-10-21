@@ -1,12 +1,14 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from db.schema import *
 from fastapi.responses import JSONResponse
+<<<<<<< HEAD:backend/routes/WEB/web_main.py
 from fastapi.security import OAuth2PasswordBearer
 from .auth import create_access_token, decode_access_token, hash_password,get_current_user
+=======
+from .utils import create_access_token, hash_password, verify_token, store_share_token, get_share_data
+>>>>>>> 6827262d893925cb383ea739adf87890c68c67d3:backend/routes/WEB/web_api.py
 from db.models import User, Applications
-from cryptography.fernet import Fernet
 from decouple import config
-import json
 from bson.objectid import ObjectId
 from db.models import SharedResources as SharedResourcesModel, User, Applications
 from db.schema import SharedResources as SharedResourcesSchema
@@ -14,11 +16,8 @@ from urllib.parse import urlparse
 
 router = APIRouter()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/web/login")
 
 # Initialize Fernet with key from .env
-FERNET_KEY = config("FERNET_KEY")
-fernet = Fernet(FERNET_KEY.encode())  
 
 @router.post("/register")
 async def register(user: SignupRequest):
@@ -50,6 +49,7 @@ async def login(user: LoginRequest):
         }
     )
 
+
 users = {
     "user1": {
         "username": "user1",
@@ -61,16 +61,13 @@ users = {
 
 
 @router.get("/user/profile", response_model=dict)
-async def get_user_profile(token: str = Depends(oauth2_scheme)):
-    payload = decode_access_token(token)
-    if not payload:
+async def get_user_profile(userid: str = Depends(verify_token)):
+    if not userid:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     
-    user_id = payload.get("sub")
-    print(f"Looking for user with _id: {user_id}")  # Debug the ID
-    from bson.objectid import ObjectId  # Import if using MongoDB ObjectId
+    print(f"Looking for user with _id: {userid}")
     try:
-        user = await User.find_one({"_id": ObjectId(user_id) if user_id.isalnum() else user_id})
+        user = await User.find_one({"_id": ObjectId(userid) if userid.isalnum() else userid})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
     except Exception as e:
@@ -83,35 +80,43 @@ async def get_user_profile(token: str = Depends(oauth2_scheme)):
     })
 
 
-@router.post("/collaborate/create")
-async def create_collaborative_link(request: ApplicationRequest, token: str = Depends(oauth2_scheme)):
-    payload = decode_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    user_id = payload.get("sub")
-    print(f"Debug: Searching for user with username or _id: {user_id}")
 
+@router.post("/sharelink/create")
+async def create_collaborative_link(request: ApplicationRequest, userid: str = Depends(verify_token)):
     try:
-        if all(c in '0123456789abcdefABCDEF' for c in user_id) and len(user_id) == 24:
-            user = await User.find_one({"_id": ObjectId(user_id)})
-        else:
-            user = await User.find_one({"username": user_id})
+        if not userid:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+        print(f"Debug: Searching for user with username or _id: {userid}")
+
+        user = await User.find_one({"_id": ObjectId(userid)})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
+
+        app = await Applications.find_one({"app_name": request.app_name, "user_id.$id": user.id})
+        if not app:
+            raise HTTPException(status_code=404, detail="Application not found")
+
+        # data = {"user_id": userid, "application_id": str(app.id)}
+        # encrypted_data = fernet.encrypt(json.dumps(data).encode()).decode()
+        share_token = store_share_token(userid, str(app.id))
+        # collaborative_url = f"{config('BACKEND_URL')}/collaborate/{encrypted_data}"
+
+
+        return JSONResponse({
+            "status": status.HTTP_201_CREATED,
+            "message": "Collaborative link created",
+            "share_token": share_token
+        })
+        
     except Exception as e:
         print(f"Debug: User lookup error: {e}")
         raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
 
-    # ✅ FIXED QUERY
-    app = await Applications.find_one({"app_name": request.app_name, "user_id.$id": user.id})
-    if not app:
-        raise HTTPException(status_code=404, detail="Application not found")
 
-    data = {"user_id": user.username, "application_id": str(app.id)}
-    encrypted_data = fernet.encrypt(json.dumps(data).encode()).decode()
-    collaborative_url = f"{config('BACKEND_URL')}/collaborate/{encrypted_data}"
 
+<<<<<<< HEAD:backend/routes/WEB/web_main.py
     return JSONResponse({   
         "status": status.HTTP_201_CREATED,
         "message": "Collaborative link created",
@@ -164,3 +169,28 @@ async def shared_resources(url: str, current_user: User = Depends(get_current_us
         app_id=str(app_doc.id),
         accessed_user_id=str(current_user.id),
     )
+=======
+
+
+#for testing purpose only
+from pydantic import BaseModel
+
+class TokenRequest(BaseModel):
+    app_id: str
+    user_id: str
+
+@router.post("/test_set")
+def test(data : TokenRequest):
+    print(data)
+    token = store_share_token(data.user_id, data.app_id)
+    return {"share_token": token}
+
+    
+class Token(BaseModel):
+    token: str
+
+@router.get("/test_get")
+def test_get(token: Token):
+    data = get_share_data(token.token)
+    return data
+>>>>>>> 6827262d893925cb383ea739adf87890c68c67d3:backend/routes/WEB/web_api.py

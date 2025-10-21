@@ -1,7 +1,7 @@
 from beanie import Document, Link
 from pydantic import EmailStr
 from passlib.context import CryptContext
-from routes.WEB.auth import hash_password, verify_password
+from routes.WEB.utils import hash_password, verify_password
 
  # Import from auth.py
 
