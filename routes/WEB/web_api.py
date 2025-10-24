@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from db.schema import *
 from fastapi.responses import JSONResponse
 from .utils import create_access_token, hash_password, verify_token, store_share_token, get_share_data
-from db.models import User, Applications
+from db.models import SharedResourcesModel, User, Applications
 from decouple import config
 from bson.objectid import ObjectId
 
@@ -71,7 +71,25 @@ async def get_user_profile(userid: str = Depends(verify_token)):
         "email": user.email
     })
 
+# Get all apps owned by the current user
+@router.get("/my-apps")
+async def get_my_apps(userid: str = Depends(verify_token)):
+    apps = await Applications.find({"user_id": ObjectId(userid)}).to_list()
+    return [app.app_name for app in apps]
 
+#Get all apps shared with the current user
+@router.get("/shared-apps")
+async def get_shared_apps(userid: str = Depends(verify_token)):
+    shared_entries = await SharedResourcesModel.find(
+        {"accessed_user_id": ObjectId(userid)}
+    ).to_list()
+    app_names = []
+    for entry in shared_entries:
+        app = await Applications.get(entry.app_id.id)
+        if app:
+            app_names.append(app.app_name)
+
+    return app_names
 
 
 @router.post("/sharelink/create")
@@ -108,6 +126,55 @@ async def create_collaborative_link(request: ApplicationRequest, userid: str = D
 
 
 
+# Share an application with the current user  Purpose:
+        '''- Accept a share token and current user.
+        - Verify that the token is valid and that the app belongs to the owner in the token.
+        - If valid, create a SharedResourcesModel entry linking app and current user.'''
+@router.post("/share", response_model=SharedResourcesSchema)
+async def shared_resources(token: str, userid: str = Depends(verify_token)):
+    share_data = get_share_data(token)
+    if "error" in share_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=share_data["error"]
+        )
+
+    owner_user_id = share_data.get("user_id")
+    app_id = share_data.get("app_id")
+
+    user = await User.find_one({"_id": ObjectId(userid)})
+
+    app_doc = await Applications.find_one({
+        "_id": ObjectId(app_id),
+        "user_id": ObjectId(owner_user_id)
+    })
+
+    if not app_doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No matching application found for this owner and app ID"
+        )
+
+    existing = await SharedResourcesModel.find_one({
+        "app_id": ObjectId(app_id),
+        "accessed_user_id": ObjectId(userid)
+    })
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You have already accessed this shared application"
+        )
+
+    shared_entry = SharedResourcesModel(
+        app_id=app_doc,
+        accessed_user_id=user,
+    )
+    await shared_entry.insert()
+
+    return SharedResourcesSchema(
+        app_id=str(app_doc.id),
+        accessed_user_id=str(user.id),
+    )
 
 
 #for testing purpose only

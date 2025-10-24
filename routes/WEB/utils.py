@@ -45,8 +45,7 @@ def verify_token(token: str = Depends(oauth2_scheme)):
         return user_id
     except PyJWTError:
         raise HTTPException(status_code=401, detail="Token is invalid or expired")
-
-
+    
 
 def store_share_token(user_id, app_id):
     token = secrets.token_urlsafe(10)[:20]

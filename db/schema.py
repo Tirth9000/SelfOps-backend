@@ -44,7 +44,6 @@ class ApplicationRequest(BaseModel):
     app_name: str
     # created_at: TimeStamp = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-class SharedResources(BaseModel):
-    owner_user_id: str
+class SharedResourcesSchema(BaseModel):
     app_id: str
     accessed_user_id:str    
