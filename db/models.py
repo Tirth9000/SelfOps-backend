@@ -47,3 +47,9 @@ class AppContainers(Document):
     class Settings:
         name = "container_stats"
         extra = "allow"
+
+class SharedResourcesModel(Document):
+    app_id : Link[Applications]
+    accessed_user_id:Link[User]
+    class Settings:
+        name = "shared_resources"
