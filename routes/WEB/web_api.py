@@ -75,7 +75,23 @@ async def get_user_profile(userid: str = Depends(verify_token)):
 @router.get("/my-apps")
 async def get_my_apps(userid: str = Depends(verify_token)):
     apps = await Applications.find({"user_id": ObjectId(userid)}).to_list()
-    return [app.app_name for app in apps]
+    if not apps:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"success": False, "message": "No apps found for this user."}
+        )
+
+    # Store app names in a variable for clarity
+    app_list = [app.app_name for app in apps]
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "success": True,
+            "count": len(app_list),
+            "apps": app_list
+        }
+    )
 
 #Get all apps shared with the current user
 @router.get("/shared-apps")
@@ -89,7 +105,14 @@ async def get_shared_apps(userid: str = Depends(verify_token)):
         if app:
             app_names.append(app.app_name)
 
-    return app_names
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "success": True,
+            "count": len(app_names),
+            "apps": app_names
+        }
+    )
 
 
 @router.post("/sharelink/create")
@@ -114,8 +137,8 @@ async def create_collaborative_link(request: ApplicationRequest, userid: str = D
         # collaborative_url = f"{config('BACKEND_URL')}/collaborate/{encrypted_data}"
 
 
-        return JSONResponse({
-            "status": status.HTTP_201_CREATED,
+        return JSONResponse(status_code=status.HTTP_200_OK,
+            content={
             "message": "Collaborative link created",
             "share_token": share_token
         })
@@ -130,7 +153,7 @@ async def create_collaborative_link(request: ApplicationRequest, userid: str = D
         '''- Accept a share token and current user.
         - Verify that the token is valid and that the app belongs to the owner in the token.
         - If valid, create a SharedResourcesModel entry linking app and current user.'''
-@router.post("/share", response_model=SharedResourcesSchema)
+@router.post("/sharelink/join")
 async def shared_resources(token: str, userid: str = Depends(verify_token)):
     share_data = get_share_data(token)
     if "error" in share_data:
@@ -171,11 +194,12 @@ async def shared_resources(token: str, userid: str = Depends(verify_token)):
     )
     await shared_entry.insert()
 
-    return SharedResourcesSchema(
-        app_id=str(app_doc.id),
-        accessed_user_id=str(user.id),
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "message": "Succesfully stored data in SharedResources model"
+        }
     )
-
 
 #for testing purpose only
 from pydantic import BaseModel
