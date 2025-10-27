@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from db.schema import *
 from fastapi.responses import JSONResponse
 from .utils import create_access_token, hash_password, verify_token, store_share_token, get_share_data
-from db.models import SharedResourcesModel, User, Applications
+from db.models import SharedResourcesModel, User, Applications,AppContainers
 from decouple import config
 from bson.objectid import ObjectId
 
@@ -74,24 +74,9 @@ async def get_user_profile(userid: str = Depends(verify_token)):
 # Get all apps owned by the current user
 @router.get("/my-apps")
 async def get_my_apps(userid: str = Depends(verify_token)):
-    apps = await Applications.find({"user_id": ObjectId(userid)}).to_list()
-    if not apps:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"success": False, "message": "No apps found for this user."}
-        )
-
-    # Store app names in a variable for clarity
-    app_list = [app.app_name for app in apps]
-
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "success": True,
-            "count": len(app_list),
-            "apps": app_list
-        }
-    )
+    apps = await Applications.find(Applications.user_id.id = ObjectId(userid)).to_list()
+    conts= await AppContainers.find(AppContainers.app_id.id= apps[0].id).to_list()
+    return[apps,conts]
 
 #Get all apps shared with the current user
 @router.get("/shared-apps")
