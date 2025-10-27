@@ -74,8 +74,8 @@ async def get_user_profile(userid: str = Depends(verify_token)):
 # Get all apps owned by the current user
 @router.get("/my-apps")
 async def get_my_apps(userid: str = Depends(verify_token)):
-    apps = await Applications.find(Applications.user_id.id = ObjectId(userid)).to_list()
-    conts= await AppContainers.find(AppContainers.app_id.id= apps[0].id).to_list()
+    apps = await Applications.find(Applications.user_id.id == ObjectId(userid)).to_list()
+    conts= await AppContainers.find(AppContainers.app_id.id== apps[0].id).to_list()
     return[apps,conts]
 
 #Get all apps shared with the current user
