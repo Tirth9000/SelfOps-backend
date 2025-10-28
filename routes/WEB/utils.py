@@ -7,7 +7,11 @@ from datetime import datetime, timedelta
 from decouple import config
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/web/login")
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/web/login")
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+oauth2_scheme = HTTPBearer()
+
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
@@ -36,7 +40,8 @@ def decode_access_token(token: str):
         return None
 
         
-def verify_token(token: str = Depends(oauth2_scheme)):
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(oauth2_scheme)):
+    token = credentials.credentials
     try:
         payload = jwt.decode(token, config('SECRET_KEY'), algorithms=[config('ALGORITHM')])
         user_id: str = payload.get("sub")
@@ -45,7 +50,6 @@ def verify_token(token: str = Depends(oauth2_scheme)):
         return user_id
     except PyJWTError:
         raise HTTPException(status_code=401, detail="Token is invalid or expired")
-    
 
 def store_share_token(user_id, app_id):
     token = secrets.token_urlsafe(10)[:20]
