@@ -33,7 +33,7 @@ async def login(user: LoginRequest):
     if not db_user or not db_user.verify_password(user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    token = create_access_token({"sub": db_user.username}) 
+    token = create_access_token({"sub": str(db_user.id)}) 
     return JSONResponse({
         "message": "Login successful",
         "access_token": token,
@@ -72,11 +72,28 @@ async def get_user_profile(userid: str = Depends(verify_token)):
     })
 
 # Get all apps owned by the current user
+from fastapi import HTTPException, status, Depends
+from fastapi.responses import JSONResponse
+from bson import ObjectId
+
 @router.get("/my-apps")
 async def get_my_apps(userid: str = Depends(verify_token)):
-    apps = await Applications.find(Applications.user_id.id = ObjectId(userid)).to_list()
-    conts= await AppContainers.find(AppContainers.app_id.id= apps[0].id).to_list()
-    return[apps,conts]
+    apps = await Applications.find(Applications.user_id.id == ObjectId(userid)).to_list()
+    if not apps:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"apps": [], "conts": [], "message": "No apps found for this user."}
+        )
+    app_ids = [app.id for app in apps]
+    conts = await AppContainers.find(AppContainers.app_id.id.in_(app_ids)).to_list()
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "apps": [app.model_dump() for app in apps],
+            "conts": [c.model_dump() for c in conts],
+        }
+    )
+
 
 #Get all apps shared with the current user
 @router.get("/shared-apps")
@@ -89,7 +106,11 @@ async def get_shared_apps(userid: str = Depends(verify_token)):
         app = await Applications.get(entry.app_id.id)
         if app:
             app_names.append(app.app_name)
-
+        else:
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={"apps": [], "message": "No apps found for this user."}
+            )    
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
