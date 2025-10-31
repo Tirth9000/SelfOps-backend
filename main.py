@@ -41,4 +41,4 @@ app.include_router(web_router, prefix="/web", tags=["web"])
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("main:socket_app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run("backend.main:socket_app", host="0.0.0.0", port=port, reload=False)
