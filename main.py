@@ -1,7 +1,5 @@
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
-from db.models import User, Applications
 from routes.CLI.auth_api import router as cli_router
 from routes.WEB.web_api import router as web_router
 from fastapi.middleware.cors import CORSMiddleware
