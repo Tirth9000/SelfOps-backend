@@ -133,7 +133,7 @@ async def get_shared_apps(userid: str = Depends(verify_token)):
 
 
 @router.post("/sharelink/create")
-async def create_collaborative_link(app_id: str = Form(...), userid: str = Depends(verify_token)):
+async def create_collaborative_link(app_data: SharedTokenSchema, userid: str = Depends(verify_token)):
     try:
         if not userid:
             raise HTTPException(status_code=401, detail="Invalid or expired token")
@@ -144,7 +144,7 @@ async def create_collaborative_link(app_id: str = Form(...), userid: str = Depen
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        app = await Applications.find_one(Applications.id == ObjectId(app_id))
+        app = await Applications.find_one(Applications.id == ObjectId(app_data.app_id))
         if not app:
             raise HTTPException(status_code=404, detail="Application not found")
 

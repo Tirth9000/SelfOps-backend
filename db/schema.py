@@ -44,3 +44,6 @@ class LoginRequest(BaseModel):
 class SharedResourcesSchema(BaseModel):
     app_id: str
     accessed_user_id:str    
+
+class SharedTokenSchema(BaseModel):
+    app_id: str
