@@ -47,3 +47,6 @@ class SharedResourcesSchema(BaseModel):
 
 class SharedTokenSchema(BaseModel):
     app_id: str
+
+class SharedJoinSchema(BaseModel):
+    share_token: str
