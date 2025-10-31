@@ -1,4 +1,4 @@
-from db.models import User
+from backend.db.models import User
 from backend.routes.WEB.utils import verify_password
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
