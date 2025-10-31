@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from routes.CLI.auth_api import router as cli_router
-from routes.WEB.web_api import router as web_router
+from backend.routes.CLI.auth_api import router as cli_router
+from backend.routes.WEB.web_api import router as web_router
 from fastapi.middleware.cors import CORSMiddleware
-from socket_server import socket_app
-from db.database import init_db
+from backend.socket_server import socket_app
+from backend.db.database import init_db
 import os
 
 
