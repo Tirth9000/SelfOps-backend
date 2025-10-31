@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Form, Depends
 from db.schema import *
 from fastapi.responses import JSONResponse
-from .utils import create_access_token, hash_password, verify_token, store_share_token, get_share_data
-from db.models import SharedResourcesModel, User, Applications,AppContainers
-from decouple import config
+from .utils import *
+from db.models import SharedResourcesModel, User, Applications, AppContainers
 from bson.objectid import ObjectId
+from datetime import timedelta
+import json
 
 router = APIRouter()
 
@@ -27,28 +28,43 @@ async def register(user: SignupRequest):
     })
 
 
+
 @router.post("/login")
 async def login(user: LoginRequest):
     db_user = await User.find_one({"email": user.email})
     if not db_user or not db_user.verify_password(user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    token = create_access_token({"sub": str(db_user.id)}) 
+    access_token = create_access_token({"sub": str(db_user.id)}) 
+    refresh_token = create_refresh_token({"sub": str(db_user.id)})
+
+    data = {"refresh_token": refresh_token}
+    r_client.setex(str(db_user.id), timedelta(days=7), json.dumps(data))
+
     return JSONResponse({
         "message": "Login successful",
-        "access_token": token,
+        "access_token": access_token,
         "token_type": "bearer"
         }
     )
 
 
-users = {
-    "user1": {
-        "username": "user1",
-        "email": "user1@gmail.com",
-        "password": "pass123",
-    },
-}
+@router.post("/token/refresh")
+async def refresh_token_endpoint(old_access_token: str = Form(...)):
+    try:
+        payload = decode_access_token(old_access_token)
+        user_id: str = payload.get("sub")
+        stored_refresh_token = await r_client.get(user_id)
+        if stored_refresh_token is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid refresh token")
+        
+        new_access_token = create_access_token({"sub": user_id})
+        return JSONResponse({
+            "access_token": new_access_token,
+            "token_type": "bearer"
+        })
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Refresh token is invalid or expired")
 
 
 
@@ -71,10 +87,7 @@ async def get_user_profile(userid: str = Depends(verify_token)):
         "email": user.email
     })
 
-# Get all apps owned by the current user
-from fastapi import HTTPException, status, Depends
-from fastapi.responses import JSONResponse
-from bson import ObjectId
+
 
 @router.get("/my-apps")
 async def get_my_apps(userid: str = Depends(verify_token)):
@@ -82,47 +95,45 @@ async def get_my_apps(userid: str = Depends(verify_token)):
     if not apps:
         return JSONResponse(
             status_code=status.HTTP_200_OK,
-            content={"apps": [], "conts": [], "message": "No apps found for this user."}
+            content={"apps": [], "message": "No apps found for this user."}
         )
-    app_ids = [app.id for app in apps]
-    conts = await AppContainers.find(AppContainers.app_id.id.in_(app_ids)).to_list()
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "apps": [app.model_dump() for app in apps],
-            "conts": [c.model_dump() for c in conts],
-        }
-    )
+    return {"apps": apps, "status_code": status.HTTP_200_OK}
+
+
+
+@router.get("/app/containers/{app_id}")
+async def get_app_containers(app_id: str): 
+    if not app_id:
+        raise HTTPException(status_code=400, detail="app_id is required")
+    
+    app_containers = await AppContainers.find(AppContainers.app_id.id == ObjectId(app_id)).to_list()
+    return {"app_containers": app_containers, "status_code": status.HTTP_200_OK}
+    
 
 
 #Get all apps shared with the current user
 @router.get("/shared-apps")
 async def get_shared_apps(userid: str = Depends(verify_token)):
-    shared_entries = await SharedResourcesModel.find(
-        {"accessed_user_id": ObjectId(userid)}
-    ).to_list()
-    app_names = []
-    for entry in shared_entries:
-        app = await Applications.get(entry.app_id.id)
-        if app:
-            app_names.append(app.app_name)
-        else:
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content={"apps": [], "message": "No apps found for this user."}
-            )    
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "success": True,
-            "count": len(app_names),
-            "apps": app_names
-        }
-    )
+    shared_apps = await SharedResourcesModel.find(
+        SharedResourcesModel.accessed_user_id.id == ObjectId(userid)
+        ).to_list()
+
+    if not shared_apps:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"shared_apps": [], "message": "No shared apps found for this user."}
+        )
+    
+    apps = []
+    for app in shared_apps:
+        apps.append(await app.app_id.fetch())
+    
+    return {"apps": apps, "status_code": status.HTTP_200_OK}
+
 
 
 @router.post("/sharelink/create")
-async def create_collaborative_link(request: ApplicationRequest, userid: str = Depends(verify_token)):
+async def create_collaborative_link(app_id: str = Form(...), userid: str = Depends(verify_token)):
     try:
         if not userid:
             raise HTTPException(status_code=401, detail="Invalid or expired token")
@@ -133,14 +144,11 @@ async def create_collaborative_link(request: ApplicationRequest, userid: str = D
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        app = await Applications.find_one({"app_name": request.app_name, "user_id.$id": user.id})
+        app = await Applications.find_one(Applications.id == ObjectId(app_id))
         if not app:
             raise HTTPException(status_code=404, detail="Application not found")
 
-        # data = {"user_id": userid, "application_id": str(app.id)}
-        # encrypted_data = fernet.encrypt(json.dumps(data).encode()).decode()
         share_token = store_share_token(userid, str(app.id))
-        # collaborative_url = f"{config('BACKEND_URL')}/collaborate/{encrypted_data}"
 
 
         return JSONResponse(status_code=status.HTTP_200_OK,
@@ -160,7 +168,7 @@ async def create_collaborative_link(request: ApplicationRequest, userid: str = D
         - Verify that the token is valid and that the app belongs to the owner in the token.
         - If valid, create a SharedResourcesModel entry linking app and current user.'''
 @router.post("/sharelink/join")
-async def shared_resources(token: str, userid: str = Depends(verify_token)):
+async def shared_resources(token: str = Form(...), userid: str = Depends(verify_token)):
     share_data = get_share_data(token)
     if "error" in share_data:
         raise HTTPException(
@@ -173,10 +181,8 @@ async def shared_resources(token: str, userid: str = Depends(verify_token)):
 
     user = await User.find_one({"_id": ObjectId(userid)})
 
-    app_doc = await Applications.find_one({
-        "_id": ObjectId(app_id),
-        "user_id": ObjectId(owner_user_id)
-    })
+
+    app_doc = await Applications.find_one(Applications.id == ObjectId(app_id), Applications.user_id.id == ObjectId(owner_user_id))
 
     if not app_doc:
         raise HTTPException(
@@ -206,6 +212,11 @@ async def shared_resources(token: str, userid: str = Depends(verify_token)):
             "message": "Succesfully stored data in SharedResources model"
         }
     )
+
+
+
+
+
 
 #for testing purpose only
 from pydantic import BaseModel

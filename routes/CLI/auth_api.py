@@ -20,6 +20,7 @@ async def cli_login(user_data: LoginRequest):
     return {
         "status": status.HTTP_200_OK,
         "message": "Login successful",
+        "username": user.username,
         "access_token": token,
         "token_type": "bearer"
     }
@@ -55,7 +56,7 @@ async def store_container_stats(data: StatsRequest, userid: str = Depends(verify
             ]
 
             await AppContainers.insert_many(app_containers)
-            return JSONResponse(content={"message": "Container stats stored successfully"},
+            return JSONResponse(content={"app_id": str(app.id), "message": "Container stats stored successfully"},
                                 status_code=status.HTTP_201_CREATED)
     except Exception as e:
         return JSONResponse(content={"message": f"Error storing container stats: {e}"},
