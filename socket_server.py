@@ -4,7 +4,8 @@ import socketio
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins='*')
 socket_app = socketio.ASGIApp(sio, socketio_path="ws")
 
-register_room = {}
+
+cli_connections = {}
 
 
 @sio.event
@@ -13,23 +14,32 @@ async def connect(sid, environ):
 
 @sio.event
 async def disconnect(sid):
+    print(cli_connections, "disconnecting room")
+    if sid in cli_connections:
+        del cli_connections[sid]
+    print(cli_connections, "disconnected")
     print(f'Client disconnected: {sid}')
+
 
 @sio.event
 async def join(sid, data):
-    room = data.get('room')
-    username = data.get('username')
-    print(f'{username} is trying to join room: {room}')
+    room_data = data.get('room').split('-')
 
-    register_room[sid] = {"username": username, "room":room}
+    room = room_data[1]
+    if room_data[0] == "cli":
+        if room in cli_connections.values():
+            return {"status_code": 409, "message": "Pipeline already exists"}
+        cli_connections[sid] = room
 
     await sio.enter_room(sid, room)
-    print(f'{username} joined room: {room}')
+    print(cli_connections)
+    return {"status_code": 200, "message": f"Joined room {room} successfully"}
+
     
 
 @sio.event
 async def live_message(sid, data):
-    print(f'Message from {sid}: {data}')
-    print(register_room[sid]['room'])
-    await sio.emit("live_message", data, room=register_room[sid]['room'])
+    rooms_list = list(sio.rooms(sid))
+    room = rooms_list[1]
+    await sio.emit("live_message", data, room=room)
     print('message sent!')

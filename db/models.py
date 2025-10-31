@@ -1,6 +1,6 @@
-from beanie import Document, Link
+from beanie import Document, Link, PydanticObjectId
+from bson.objectid import ObjectId
 from pydantic import EmailStr
-from passlib.context import CryptContext
 from routes.WEB.utils import hash_password, verify_password
 
  # Import from auth.py
@@ -27,7 +27,13 @@ class Applications(Document):
 
     class Settings:
         name = "applications"
-
+        
+    class Config:
+        json_encoders = {
+            ObjectId: str,
+            PydanticObjectId: str
+        }
+    
 
 class AppContainers(Document):
     app_id: Link[Applications]
@@ -48,8 +54,15 @@ class AppContainers(Document):
         name = "container_stats"
         extra = "allow"
 
+    class Config:
+        json_encoders = {
+            ObjectId: str,
+            PydanticObjectId: str
+        }
+
 class SharedResourcesModel(Document):
     app_id : Link[Applications]
     accessed_user_id:Link[User]
+    
     class Settings:
         name = "shared_resources"

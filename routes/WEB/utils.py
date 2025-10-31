@@ -32,6 +32,13 @@ def create_access_token(data: dict):
     encoded_jwt = jwt.encode(to_encode, config('SECRET_KEY'), algorithm=config('ALGORITHM'))
     return encoded_jwt
 
+def create_refresh_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=int(config('REFRESH_TOKEN_EXPIRE_DAYS')))
+    to_encode.update({"exp": expire})
+    refresh_token = jwt.encode(to_encode, config('REFRESH_SECRET_KEY'), algorithm=config('ALGORITHM'))
+    return refresh_token
+
 def decode_access_token(token: str):
     try:
         payload = jwt.decode(token, config('SECRET_KEY'), algorithms=[config('ALGORITHM')])
@@ -39,6 +46,12 @@ def decode_access_token(token: str):
     except jwt.PyJWTError:
         return None
 
+def decode_refresh_token(token: str):
+    try:
+        payload = jwt.decode(token, config('REFRESH_SECRET_KEY'), algorithms=[config('ALGORITHM')])
+        return payload
+    except jwt.PyJWTError:
+        return None
         
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(oauth2_scheme)):
     token = credentials.credentials
@@ -51,6 +64,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(oauth2_sche
     except PyJWTError:
         raise HTTPException(status_code=401, detail="Token is invalid or expired")
 
+
 def store_share_token(user_id, app_id):
     token = secrets.token_urlsafe(10)[:20]
     data = {"user_id": user_id, "app_id": app_id}
@@ -62,3 +76,4 @@ def get_share_data(token):
     if not data:
         return {"error": "Token expired or invalid"}
     return json.loads(data)
+
