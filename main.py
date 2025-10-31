@@ -7,6 +7,7 @@ from routes.WEB.web_api import router as web_router
 from fastapi.middleware.cors import CORSMiddleware
 from socket_server import socket_app
 from db.database import init_db
+import os
 
 
 @asynccontextmanager
@@ -39,4 +40,5 @@ app.include_router(web_router, prefix="/web", tags=["web"])
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:socket_app", host="localhost", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:socket_app", host="0.0.0.0", port=port, reload=False)
