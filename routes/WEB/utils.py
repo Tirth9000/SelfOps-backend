@@ -1,7 +1,6 @@
 import jwt, redis, json, secrets
 from jwt import PyJWTError
 from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from decouple import config
