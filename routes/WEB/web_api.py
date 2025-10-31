@@ -168,8 +168,8 @@ async def create_collaborative_link(app_data: SharedTokenSchema, userid: str = D
         - Verify that the token is valid and that the app belongs to the owner in the token.
         - If valid, create a SharedResourcesModel entry linking app and current user.'''
 @router.post("/sharelink/join")
-async def shared_resources(token: str = Form(...), userid: str = Depends(verify_token)):
-    share_data = get_share_data(token)
+async def shared_resources(token_data: SharedJoinSchema, userid: str = Depends(verify_token)):
+    share_data = get_share_data(token_data.share_token)
     if "error" in share_data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -181,6 +181,13 @@ async def shared_resources(token: str = Form(...), userid: str = Depends(verify_
 
     user = await User.find_one({"_id": ObjectId(userid)})
 
+    if owner_user_id == userid:
+        return JSONResponse(
+            status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+            content={
+                "message": "You are the owner of this application, no need to join."
+            }
+        )
 
     app_doc = await Applications.find_one(Applications.id == ObjectId(app_id), Applications.user_id.id == ObjectId(owner_user_id))
 

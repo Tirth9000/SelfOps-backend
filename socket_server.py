@@ -32,7 +32,6 @@ async def join(sid, data):
         cli_connections[sid] = room
 
     await sio.enter_room(sid, room)
-    print(cli_connections)
     return {"status_code": 200, "message": f"Joined room {room} successfully"}
 
     
@@ -40,6 +39,6 @@ async def join(sid, data):
 @sio.event
 async def live_message(sid, data):
     rooms_list = list(sio.rooms(sid))
-    room = rooms_list[1]
+    room = rooms_list[0]
     await sio.emit("live_message", data, room=room)
     print('message sent!')
