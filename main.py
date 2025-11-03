@@ -1,12 +1,12 @@
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
-from db.models import User, Applications
 from routes.CLI.auth_api import router as cli_router
 from routes.WEB.web_api import router as web_router
 from fastapi.middleware.cors import CORSMiddleware
 from socket_server import socket_app
 from db.database import init_db
+import os
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,4 +38,5 @@ app.include_router(web_router, prefix="/web", tags=["web"])
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:socket_app", host="localhost", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:socket_app", host="0.0.0.0", port=port, reload=False)

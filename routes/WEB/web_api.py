@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Form, Depends
+from fastapi import APIRouter, HTTPException, status, Depends
 from db.schema import *
 from fastapi.responses import JSONResponse
 from .utils import *
@@ -50,9 +50,9 @@ async def login(user: LoginRequest):
 
 
 @router.post("/token/refresh")
-async def refresh_token_endpoint(old_access_token: str = Form(...)):
+async def refresh_token_endpoint(old_token: GetOldToken):
     try:
-        payload = decode_access_token(old_access_token)
+        payload = decode_access_token(old_token.old_access_token)
         user_id: str = payload.get("sub")
         stored_refresh_token = await r_client.get(user_id)
         if stored_refresh_token is None:
