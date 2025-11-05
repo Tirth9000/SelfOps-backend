@@ -5,11 +5,10 @@ from .models import User, Applications, AppContainers, SharedResourcesModel
 
 async def init_db():
     client = AsyncIOMotorClient(config("MONGODB_URI"))
-    db = client.get_default_database()   # ✅ initialize db first
-    print(f"✅ Connected to MongoDB database: {db.name}")
-    
+    db = client.get_default_database()
+    print("db connected")
     await init_beanie(
         database=db,
         document_models=[User, Applications, AppContainers, SharedResourcesModel]
     )
-    print("✅ Beanie models initialized successfully!")
+    print("Beanie models initialized successfully!")
