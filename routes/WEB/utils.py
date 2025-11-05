@@ -15,8 +15,8 @@ oauth2_scheme = HTTPBearer()
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
-r_client = redis.Redis(host=config('REDIS_HOST'), port=int(config("REDIS_PORT")), db=0)
-
+# r_client = redis.Redis(host=config('REDIS_HOST'), port=int(config("REDIS_PORT")), db=0)
+r_client = redis.Redis.from_url(config("REDIS_URL"), ssl=True)
 
 
 def hash_password(password: str) -> str:
@@ -76,4 +76,3 @@ def get_share_data(token):
     if not data:
         return {"error": "Token expired or invalid"}
     return json.loads(data)
-
