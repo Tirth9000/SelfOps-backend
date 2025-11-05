@@ -16,8 +16,7 @@ oauth2_scheme = HTTPBearer()
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 # r_client = aioredis.from_url(config('REDIS_HOST'), decode_responses=True)
-r_client = redis.Redis(host=config('REDIS_HOST'), port=int(config("REDIS_PORT")), db=0)
-
+r_client = redis.Redis.from_url(config("REDIS_URL"), ssl=True)
 
 
 def hash_password(password: str) -> str:
