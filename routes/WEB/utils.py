@@ -1,11 +1,11 @@
 import jwt, redis, json, secrets
 from jwt import PyJWTError
 from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from decouple import config
 
+import redis.asyncio as aioredis  # or aioredis if using older version
 
 # oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/web/login")
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -15,8 +15,9 @@ oauth2_scheme = HTTPBearer()
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
-# r_client = redis.Redis(host=config('REDIS_HOST'), port=int(config("REDIS_PORT")), db=0)
-r_client = redis.Redis.from_url(config("REDIS_URL"), ssl=True)
+# r_client = aioredis.from_url(config('REDIS_HOST'), decode_responses=True)
+r_client = redis.Redis(host=config('REDIS_HOST'), port=int(config("REDIS_PORT")), db=0)
+
 
 
 def hash_password(password: str) -> str:
@@ -76,3 +77,4 @@ def get_share_data(token):
     if not data:
         return {"error": "Token expired or invalid"}
     return json.loads(data)
+
