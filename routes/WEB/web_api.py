@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Form, Depends
+from fastapi import APIRouter, HTTPException, status, Depends
 from db.schema import *
 from fastapi.responses import JSONResponse
 from .utils import *
@@ -50,9 +50,9 @@ async def login(user: LoginRequest):
 
 
 @router.post("/token/refresh")
-async def refresh_token_endpoint(old_access_token: str = Form(...)):
+async def refresh_token_endpoint(old_token: GetOldToken):
     try:
-        payload = decode_access_token(old_access_token)
+        payload = decode_access_token(old_token.old_access_token)
         user_id: str = payload.get("sub")
         stored_refresh_token = await r_client.get(user_id)
         if stored_refresh_token is None:
@@ -169,56 +169,58 @@ async def create_collaborative_link(app_data: SharedTokenSchema, userid: str = D
         - If valid, create a SharedResourcesModel entry linking app and current user.'''
 @router.post("/sharelink/join")
 async def shared_resources(token_data: SharedJoinSchema, userid: str = Depends(verify_token)):
-    share_data = get_share_data(token_data.share_token)
-    if "error" in share_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=share_data["error"]
+    try:
+        share_data = get_share_data(token_data.share_token)
+        if "error" in share_data:
+            return HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=share_data["error"]
+            )
+
+        owner_user_id = share_data.get("user_id")
+        application_id = share_data.get("app_id")
+
+        user = await User.find_one({"_id": ObjectId(userid)})
+
+        if owner_user_id == userid:
+            return JSONResponse(
+                status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+                content={
+                    "message": "You are the owner of this application, no need to join."
+                }
+            )
+
+        app_doc = await Applications.find_one(Applications.id == ObjectId(application_id), Applications.user_id.id == ObjectId(owner_user_id))
+
+        if not app_doc:
+            return HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No matching application found for this owner and app ID"
+            )
+
+        existing = await SharedResourcesModel.find_one(SharedResourcesModel.app_id.id == ObjectId(application_id), SharedResourcesModel.accessed_user_id.id == ObjectId(userid))
+        print(existing)
+        if existing:
+            return HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="You have already accessed this shared application"
+            )
+
+        shared_entry = SharedResourcesModel(
+            app_id=app_doc,
+            accessed_user_id=user,
         )
+        await shared_entry.insert()
 
-    owner_user_id = share_data.get("user_id")
-    app_id = share_data.get("app_id")
-
-    user = await User.find_one({"_id": ObjectId(userid)})
-
-    if owner_user_id == userid:
         return JSONResponse(
-            status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+            status_code=status.HTTP_200_OK,
             content={
-                "message": "You are the owner of this application, no need to join."
+                "message": "Succesfully stored data in SharedResources model"
             }
         )
-
-    app_doc = await Applications.find_one(Applications.id == ObjectId(app_id), Applications.user_id.id == ObjectId(owner_user_id))
-
-    if not app_doc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No matching application found for this owner and app ID"
-        )
-
-    existing = await SharedResourcesModel.find_one({
-        "app_id": ObjectId(app_id),
-        "accessed_user_id": ObjectId(userid)
-    })
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="You have already accessed this shared application"
-        )
-
-    shared_entry = SharedResourcesModel(
-        app_id=app_doc,
-        accessed_user_id=user,
-    )
-    await shared_entry.insert()
-
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "message": "Succesfully stored data in SharedResources model"
-        }
-    )
+    except Exception as e:
+        print(f"Debug: Error in sharing application: {e}")
+        return HTTPException(status_code=500, detail=f"Error sharing application: {str(e)}")
 
 
 

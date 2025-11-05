@@ -50,3 +50,6 @@ class SharedTokenSchema(BaseModel):
 
 class SharedJoinSchema(BaseModel):
     share_token: str
+
+class GetOldToken(BaseModel):
+    old_access_token: str

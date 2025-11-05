@@ -66,3 +66,9 @@ class SharedResourcesModel(Document):
     
     class Settings:
         name = "shared_resources"
+    
+    class Config:
+        json_encoders = {
+            ObjectId: str,
+            PydanticObjectId: str
+        }
