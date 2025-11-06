@@ -10,8 +10,6 @@ import json
 router = APIRouter()
 
 
-# Initialize Fernet with key from .env
-
 @router.post("/register")
 async def register(user: SignupRequest):
     existing = await User.find_one({"email": user.email})
@@ -111,7 +109,6 @@ async def get_app_containers(app_id: str):
     
 
 
-#Get all apps shared with the current user
 @router.get("/shared-apps")
 async def get_shared_apps(userid: str = Depends(verify_token)):
     shared_apps = await SharedResourcesModel.find(
@@ -163,10 +160,6 @@ async def create_collaborative_link(app_data: SharedTokenSchema, userid: str = D
 
 
 
-# Share an application with the current user  Purpose:
-        '''- Accept a share token and current user.
-        - Verify that the token is valid and that the app belongs to the owner in the token.
-        - If valid, create a SharedResourcesModel entry linking app and current user.'''
 @router.post("/sharelink/join")
 async def shared_resources(token_data: SharedJoinSchema, userid: str = Depends(verify_token)):
     try:
