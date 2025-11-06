@@ -1,7 +1,7 @@
 from beanie import Document, Link, PydanticObjectId
 from bson.objectid import ObjectId
 from pydantic import EmailStr
-from backend.routes.WEB.utils import hash_password, verify_password
+from routes.WEB.utils import hash_password, verify_password
 
  # Import from auth.py
 
