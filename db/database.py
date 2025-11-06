@@ -4,7 +4,7 @@ from decouple import config
 from .models import User, Applications, AppContainers, SharedResourcesModel
 
 async def init_db():
-    client = AsyncIOMotorClient(config("MONGODB_URI"))
+    client = AsyncIOMotorClient(config("MONGODB_URL"))
     db = client.get_default_database()
     print("db connected")
     await init_beanie(
