@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from db.schema import *
+from backend.db.schema import *
 from fastapi.responses import JSONResponse
 from .utils import *
-from db.models import SharedResourcesModel, User, Applications, AppContainers
+from backend.db.models import SharedResourcesModel, User, Applications, AppContainers
 from bson.objectid import ObjectId
 from datetime import timedelta
 import json

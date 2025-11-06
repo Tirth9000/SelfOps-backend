@@ -1,10 +1,10 @@
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
-from routes.CLI.utils import cli_create_access_token
-from db.schema import LoginRequest, StatsRequest
+from backend.routes.CLI.utils import cli_create_access_token
+from backend.db.schema import LoginRequest, StatsRequest
 from .utils import authenticate_user, verify_token
-from db.models import User, Applications, AppContainers
+from backend.db.models import User, Applications, AppContainers
 
 router = APIRouter()
 
