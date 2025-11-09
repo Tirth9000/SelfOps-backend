@@ -26,6 +26,7 @@ async def join(sid, data):
     room_data = data.get('room').split('-')
 
     room = room_data[1]
+    print(room)
     if room_data[0] == "cli":
         if room in cli_connections.values():
             return {"status_code": 409, "message": "Pipeline already exists"}
@@ -38,7 +39,6 @@ async def join(sid, data):
 
 @sio.event
 async def live_message(sid, data):
-    rooms_list = list(sio.rooms(sid))
-    room = rooms_list[0]
+    room = cli_connections.get(sid)
     await sio.emit("live_message", data, room=room)
     print('message sent!')
