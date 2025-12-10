@@ -4,7 +4,7 @@
 
 SelfOps is a unified CLI-based Docker monitoring tool that connects with your SelfOps web dashboard to provide real-time insights into containers running across multiple servers — from cloud to native.
 
-## OwlOps Team
+## SelfOps Team
 
 - [Tirth Sharma](https://github.com/Tirth9000)
 - [Aditya Thakar](https://github.com/Araaditya)
